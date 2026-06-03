@@ -1,0 +1,97 @@
+# =============================================================================
+# ALCA CI Pipeline — runs on every push and pull request
+# =============================================================================
+
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Backend — install, import smoke, and the integration suite against Postgres
+  # ---------------------------------------------------------------------------
+  backend:
+    name: Backend (tests)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: alca
+          POSTGRES_PASSWORD: alca
+          POSTGRES_DB: alca_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql+asyncpg://alca:alca@localhost:5432/alca_test
+      DATABASE_URL_SYNC: postgresql://alca:alca@localhost:5432/alca_test
+      ANTHROPIC_API_KEY: "sk-ant-test-placeholder"
+      ASSEMBLYAI_API_KEY: "test-placeholder"
+      SECRET_KEY: "ci-test-secret-key-not-for-production-use-only"
+      APP_ENV: "development"
+      DEBUG: "true"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install ruff
+
+      - name: Lint (non-blocking until ruff config lands)
+        working-directory: backend
+        run: ruff check app/ || true
+
+      - name: Run integration tests
+        working-directory: backend
+        run: python -m pytest -v --tb=short
+
+  # ---------------------------------------------------------------------------
+  # Frontend — type-check and production build
+  # ---------------------------------------------------------------------------
+  frontend:
+    name: Frontend (build)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Type-check
+        working-directory: frontend
+        run: npx tsc --noEmit
+
+      - name: Production build
+        working-directory: frontend
+        run: npm run build
+        env:
+          CI: false   # CRA treats warnings as errors under CI=true; keep warnings non-fatal
