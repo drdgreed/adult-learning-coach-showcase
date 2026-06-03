@@ -1,280 +1,157 @@
-# Adult Learning Coaching Agent (ALCA)
+# ALCA — Adult Learning Coaching Agent
 
-**AI-powered instructional coaching for distance learning evaluation.**
+**AI coaching for instructor quality: video in, evidence-based report out — in minutes, not hours**
 
-ALCA transforms video recordings of training sessions into comprehensive, evidence-based coaching reports. Upload a teaching video, and the system automatically transcribes the audio, analyzes teaching effectiveness across four research-backed dimensions, and generates a professional PDF coaching report with actionable feedback.
+[Problem](#the-problem) • [Architecture](#architecture) • [Results](#results) • [Quick Start](#quick-start) • [API](#api-documentation) • [Demo Scenarios](#demo-scenarios) • [About](#about-the-author)
 
-Built for corporate training departments, EdTech companies, professional development providers, and anyone responsible for improving instructor quality at scale.
-
----
-
-## What It Does
-
-| Without ALCA | With ALCA |
-|---|---|
-| 10-14 hours per evaluation (watch video, take notes, write report) | 90-120 minutes (upload, automated analysis, coach review) |
-| Subjective feedback varies by evaluator | Standardized rubric applied consistently every time |
-| No historical tracking | Longitudinal trends across 10+ sessions |
-| Feedback weeks after the session | Report ready in minutes |
-
-### The Pipeline
-
-```
-Video Upload  -->  Transcription  -->  AI Analysis  -->  PDF Report
-  (MP4/MOV)      (AssemblyAI)       (Claude)         (ReportLab)
-                  Speaker labels     4 dimensions      Branded report
-                  Timestamps         Metrics + evidence Reflection worksheet
-
-           Multi-Video Comparison (cross-session analysis)
-           ────────────────────────────────────────────────
-           Select 2-10  -->  Aggregate  -->  Claude Cross-  -->  Comparison
-           completed         reports         Session Analysis    PDF Report
-           evaluations       + metrics       (3 prompt types)    + trends
-```
-
-### Analysis Framework (4 Dimensions)
-
-1. **Clarity & Pacing** - Speaking pace (target 120-160 WPM), strategic pauses, filler word frequency, jargon detection
-2. **Engagement Techniques** - Question frequency and types, vocal variety, participation invitations
-3. **Explanation Quality** - Analogy effectiveness, example relevance to adult learners, scaffolding from foundational to advanced
-4. **Time Management** - Tangent detection (<10% of class time), pacing balance, structural signposting
-
-Every observation is backed by a timestamped citation from the transcript. Metrics include shown calculations so instructors understand exactly how scores are derived.
+[![CI](https://github.com/drdgreed/adult-learning-coach-showcase/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/drdgreed/adult-learning-coach-showcase/actions/workflows/ci.yml)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-green.svg)](https://fastapi.tiangolo.com/)
+[![React 19](https://img.shields.io/badge/React-19+-61dafb.svg)](https://react.dev/)
+[![Claude API](https://img.shields.io/badge/Claude-Sonnet%204.5-blueviolet.svg)](https://anthropic.com/)
+[![AssemblyAI](https://img.shields.io/badge/AssemblyAI-speech--to--text-6f4cff.svg)](https://www.assemblyai.com/)
+[![Tests](https://img.shields.io/badge/tests-61%20integration-success.svg)](#results)
+[![Synthetic data](https://img.shields.io/badge/data-synthetic%20only-orange.svg)](#portfolio-disclaimer)
+[![MIT License](https://img.shields.io/badge/license-MIT-lightgrey.svg)](LICENSE)
 
 ---
 
-## Key Features
+## Portfolio disclaimer
 
-### For Instructors
-- Upload training session videos (MP4, MOV, WebM, AVI up to 10GB)
-- View AI-generated coaching reports with strengths and growth areas
-- Download professional PDF reports and reflection worksheets
-- Track improvement over time with trend charts
-- Compare your own sessions to see personal growth patterns
+ALCA is published as an **engineering portfolio and evaluation artifact**, not a production service. It runs against **synthetic instructor data only** — no real learner or employee recordings are stored in or distributed with this repository. The cost figures, latencies, and pass rates below are labeled at the point of use as **measured**, **documented**, or **estimated** so a reader always knows which is which. See [SECURITY.md](SECURITY.md) for the data-handling posture and any production-deployment obligations.
 
-### For Coaches & Administrators
-- Review AI-generated reports before sharing with instructors
-- Compare instructor performance across sessions (multi-video comparisons)
-- Identify organization-wide patterns (recurring strengths and gaps)
-- Dashboard with aggregated metrics, evaluation history, and recent comparisons
-- Run program-wide evaluations across multiple instructors
+---
 
-### Report Output
-- **Coaching Report** (12-20 pages): Executive summary, strengths, growth opportunities, prioritized improvements, timestamped teaching moments, metrics snapshot, next steps
-- **Reflection Worksheet** (3 pages): Guided self-reflection prompts with writing space for instructors to plan their own development
-- **Comparison Report** (8-15 pages): Cross-session analysis with aggregated metrics, trend detection, shared strengths, and growth patterns across 2-10 evaluated sessions
+## Overview
+
+Organizations that train at scale — corporate L&D teams, EdTech companies, professional-development providers — face the same bottleneck: **evaluating instructor quality is slow, subjective, and unrepeatable.** A thorough manual evaluation of a single recorded session takes a skilled coach **10–14 hours** (watch, take notes, write the report), feedback lands weeks late, and two evaluators rarely score the same session the same way.
+
+ALCA turns a recorded teaching session into a **structured, evidence-cited coaching report**: it transcribes the video, analyzes teaching effectiveness across **four research-backed dimensions**, and renders a professional PDF — bringing the loop from 10–14 hours down to a **90–120-minute** upload-and-review. Every observation is anchored to a **timestamped citation** in the transcript, and every metric shows its calculation, so the feedback is auditable rather than impressionistic. A second analysis layer compares **2–10 sessions** to surface longitudinal trends across an instructor, a class, or a whole program.
+
+### The Problem
+
+- A single thorough evaluation costs a coach **10–14 hours** of watch-note-write time *(documented baseline — the manual workflow ALCA replaces)*.
+- **Inter-rater inconsistency**: feedback quality and emphasis vary by evaluator, so scores aren't comparable across instructors or over time.
+- **Latency**: instructors receive feedback weeks after the session, when the teaching moment is cold.
+- **No longitudinal view**: without a consistent rubric and historical store, "is this instructor improving?" is unanswerable.
+
+### The Solution
+
+ALCA is an async FastAPI pipeline fronted by a React dashboard. A video upload kicks off a background job that (1) transcribes with **AssemblyAI** (speaker diarization + word-level timestamps), (2) analyzes the transcript with **Claude** against a four-dimension rubric at low temperature for reproducibility, and (3) renders a branded PDF with **ReportLab**. Results persist to **PostgreSQL** (relational integrity for users and videos, JSONB for the open-ended metric payloads), so historical trends and cross-session comparisons fall out of the same data model. The four dimensions — **Clarity & Pacing**, **Engagement Techniques**, **Explanation Quality**, and **Time Management** — are each scored with shown calculations (e.g. words-per-minute against a 120–160 target, tangent time against a <10% threshold) and backed by transcript citations.
+
+---
+
+## Architecture
+
+<p align="center">
+  <img src="docs/assets/architecture.svg" alt="ALCA system architecture: React 19 frontend (Dashboard, Upload, EvaluationDetail, ComparisonCreate, ComparisonDetail) calling an async FastAPI backend whose routers launch a background pipeline through transcription, analysis, and PDF services; AssemblyAI handles transcription, Claude performs four-dimension analysis, ReportLab renders the PDF, and PostgreSQL plus an object store persist videos, transcripts, evaluations, and comparisons" width="820">
+</p>
+
+<details>
+<summary>Mermaid source (click to expand)</summary>
+
+```mermaid
+flowchart LR
+    U["Instructor / Coach / Admin"] -->|upload video| FE["React 19 SPA<br/>Dashboard · Upload · Detail · Compare"]
+    FE -->|Axios /api/v1| API["FastAPI routers<br/>videos · evaluations · instructors · comparisons"]
+    API -->|launch background task| PIPE["Pipeline orchestrator"]
+    PIPE --> TX["transcription.py"] -->|speech-to-text + diarization| AAI["AssemblyAI"]
+    PIPE --> AN["analysis.py"] -->|4-dimension rubric, temp 0.3| CL["Claude API"]
+    PIPE --> PDF["pdf_report.py"] -->|render| RL["ReportLab → PDF"]
+    API --> DB[("PostgreSQL<br/>JSONB metrics")]
+    PIPE --> ST[("Object store<br/>local FS / S3")]
+    AN -.cross-session.-> CMP["comparison_analysis.py<br/>2–10 reports, not raw transcripts"]
+```
+
+</details>
+
+---
+
+## Results
+
+Numbers are labeled by provenance: **measured** (observed in this repo), **documented** (the baseline workflow ALCA replaces), or **estimated** (modeled from current vendor pricing). No production-traffic claims are made.
+
+| Metric | Value | Provenance |
+|---|---|---|
+| **Backend test suite** | 61 async integration tests against a real PostgreSQL instance | *measured* — `pytest backend/tests` |
+| **Analysis dimensions** | 4 (Clarity & Pacing, Engagement, Explanation Quality, Time Management) | *implemented* — `services/prompts_content.py` |
+| **Evidence standard** | Every observation cites a transcript timestamp; every metric shows its calculation | *implemented* — analysis schema |
+| **Speaking-pace target** | 120–160 WPM, scored per session | *implemented* — rubric |
+| **Tangent threshold** | <10% of class time flags a time-management finding | *implemented* — `tangent_percentage` metric |
+| **Cross-session comparison** | 2–10 evaluations, range-enforced in the schema validator | *measured* — `schemas/comparisons.py` |
+| **Evaluation turnaround** | 10–14 h manual → **90–120 min** upload-and-review | *documented* baseline vs. target |
+| **Cost per evaluation** | **~$1.30** (1-h video) to **~$5.85** (6-h video) | *estimated* — AssemblyAI + Claude at 2026 pricing |
+| **Cost per comparison** | **~$0.15** (3 sessions) to **~$0.40** (10 sessions) | *estimated* — reports-not-transcripts keeps tokens low |
+| **PDF rendering** | On-demand, no stored artifacts | *implemented* — ReportLab, `pdf_report.py` |
 
 ---
 
 ## Tech Stack
 
-| Layer | Technology | Why |
-|-------|-----------|-----|
-| **Backend** | Python, FastAPI | Async-first, automatic OpenAPI docs, dependency injection |
-| **Database** | PostgreSQL + JSONB | Relational integrity for users/videos + flexible schema for metrics |
-| **Transcription** | AssemblyAI | Speaker diarization, timestamps, high accuracy on technical content |
-| **AI Analysis** | Claude (Anthropic) | 200K context window handles 6-hour transcripts, low temperature (0.3) for reproducibility |
-| **PDF Generation** | ReportLab | On-demand rendering (<100ms), no storage needed, professional typography |
-| **Frontend** | React 18 + TypeScript | MUI components, React Query for data fetching, React Router |
-| **Tests** | pytest + httpx | 61 async integration tests against real PostgreSQL |
+| Layer | Technology | Notes |
+|-------|------------|-------|
+| **LLM** | Claude (Anthropic API), Sonnet 4.5 | Low temperature (0.3) for reproducible scoring; 200K context handles 6-hour transcripts |
+| **Transcription** | AssemblyAI | Speaker diarization + word-level timestamps; citations anchor to these |
+| **Backend** | Python 3.11, FastAPI, Pydantic v2 | Async throughout; automatic OpenAPI docs at `/docs` |
+| **Database** | PostgreSQL 15+, SQLAlchemy 2.0 (async), asyncpg | Relational core + JSONB for open-ended metric payloads |
+| **PDF** | ReportLab | On-demand coaching + comparison reports, no storage needed |
+| **Storage** | Local filesystem (MVP), AWS S3 via boto3 (optional) | One abstraction, swap by config |
+| **Frontend** | React 19, TypeScript, MUI, React Query, React Router | Axios client, five route-level pages |
+| **Background work** | FastAPI `BackgroundTasks` (MVP) | Celery + Redis path scoped for Phase 2 |
+| **Testing** | pytest, pytest-asyncio, httpx | 61 integration tests against real PostgreSQL fixtures |
+| **CI** | GitHub Actions | Backend lint + tests, frontend type-check + build |
 
 ---
 
-## Getting Started
+## Quick Start
 
 ### Prerequisites
-- Python 3.11+
-- Node.js 18+
-- PostgreSQL 15+
-- [AssemblyAI API key](https://www.assemblyai.com/)
-- [Anthropic API key](https://console.anthropic.com/)
+- Python 3.11+ · Node.js 18+ · PostgreSQL 15+
+- An [AssemblyAI API key](https://www.assemblyai.com/) and an [Anthropic API key](https://console.anthropic.com/)
 
-### Setup
-
-**1. Clone and configure:**
 ```bash
-git clone https://github.com/Chaos-6/adult-learning-coach.git
-cd adult-learning-coach
-```
+git clone https://github.com/drdgreed/adult-learning-coach-showcase.git
+cd adult-learning-coach-showcase
 
-**2. Backend:**
-```bash
+# Backend
 cd backend
-python -m venv venv
-source venv/bin/activate
+python -m venv venv && source venv/bin/activate     # Windows: venv\Scripts\activate
 pip install -r requirements.txt
-
-# Create .env from the template
-cp .env.example .env
-# Edit .env with your database URL, API keys, and secret key
-
-# Start the server
+cp .env.example .env                                 # add DB URL, API keys, SECRET_KEY
 uvicorn app.main:app --reload --port 8000
+
+# Frontend (separate terminal)
+cd frontend && npm install && npm start
 ```
 
-**3. Frontend:**
-```bash
-cd frontend
-npm install
-npm start
-```
-
-The app opens at **http://localhost:3000**. The backend API is at **http://localhost:8000**.
-
-**4. Run tests:**
-```bash
-cd backend
-python -m pytest
-```
-
----
-
-## API Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/api/v1/videos/upload` | Upload a training video |
-| `GET` | `/api/v1/videos` | List videos (paginated) |
-| `GET` | `/api/v1/videos/{id}` | Get video details |
-| `DELETE` | `/api/v1/videos/{id}` | Delete a video |
-| `POST` | `/api/v1/evaluations` | Start a coaching evaluation |
-| `GET` | `/api/v1/evaluations/{id}` | Check evaluation status |
-| `GET` | `/api/v1/evaluations/{id}/transcript` | Get transcript text |
-| `GET` | `/api/v1/evaluations/{id}/report` | Get coaching report (JSON) |
-| `GET` | `/api/v1/evaluations/{id}/report/pdf` | Download coaching report PDF |
-| `GET` | `/api/v1/evaluations/{id}/worksheet/pdf` | Download reflection worksheet PDF |
-| `GET` | `/api/v1/instructors/{id}/dashboard` | Instructor performance dashboard |
-| `GET` | `/api/v1/instructors/{id}/evaluations` | Evaluation history (paginated) |
-| `GET` | `/api/v1/instructors/{id}/metrics/{key}` | Single metric trend data |
-| `POST` | `/api/v1/comparisons` | Create a multi-video comparison |
-| `GET` | `/api/v1/comparisons` | List comparisons (paginated, filterable) |
-| `GET` | `/api/v1/comparisons/{id}` | Get comparison details + linked evaluations |
-| `POST` | `/api/v1/comparisons/{id}/start` | Start analysis on a draft comparison |
-| `GET` | `/api/v1/comparisons/{id}/report` | Get comparison report (JSON) |
-| `GET` | `/api/v1/comparisons/{id}/report/pdf` | Download comparison report PDF |
-| `DELETE` | `/api/v1/comparisons/{id}` | Delete a comparison |
-| `GET` | `/health` | Health check with database status |
-
-Interactive API documentation available at **http://localhost:8000/docs** when the server is running.
-
----
-
-## Project Structure
-
-```
-adult-learning-coach/
-  backend/
-    app/
-      models/         # SQLAlchemy models (User, Video, Transcript, Evaluation,
-                      #   Comparison, ComparisonEvaluation)
-      routers/        # FastAPI route handlers
-        videos.py         # Video upload and management
-        evaluations.py    # Single-video coaching evaluations
-        instructors.py    # Dashboard and performance tracking
-        comparisons.py    # Multi-video comparison endpoints
-      schemas/        # Pydantic request/response schemas
-        comparisons.py    # Comparison create/response schemas with validation
-      services/       # Business logic
-        analysis.py               # Claude coaching analysis (single video)
-        comparison_analysis.py    # Claude cross-session analysis
-        comparison_pipeline.py    # Comparison background pipeline orchestrator
-        comparison_pdf.py         # Comparison PDF report generator
-        prompts.py                # All prompt engineering (evaluation + comparison)
-        transcription.py          # AssemblyAI integration
-        evaluation.py             # Single-video pipeline orchestrator
-        pdf_report.py             # Coaching report + worksheet PDF generation
-        storage.py                # File storage abstraction
-      config.py       # Environment configuration
-      database.py     # Async SQLAlchemy setup
-      main.py         # FastAPI app entry point
-    tests/            # 61 integration tests
-  frontend/
-    src/
-      api/            # Axios API client (evaluations + comparisons)
-      components/     # Layout, navigation
-      pages/          # Dashboard, Upload, EvaluationDetail,
-                      #   ComparisonCreate, ComparisonDetail
-      theme/          # MUI theme configuration
-```
-
----
-
-## Development Status
-
-This is an MVP (Phase 1) implementation covering the core coaching pipeline plus multi-video comparison. See the [Production PRD](docs/) for the full product vision.
-
-### What's Built (MVP)
-- Video upload with format validation
-- AssemblyAI transcription with speaker diarization
-- Claude-powered coaching analysis (all 4 dimensions)
-- PDF report and reflection worksheet generation
-- Historical performance tracking with trend detection
-- React dashboard with metric charts and evaluation history
-- Multi-video comparison feature (see below)
-- 61 backend integration tests
-
-### What's Next (Phase 2)
-- Authentication and role-based access control
-- AWS S3 storage (currently local filesystem)
-- Celery task queue for production-scale processing
-- Coach and administrator views
-- Video hosting with timestamped playback
-- Collaborative coaching (multi-reviewer)
-- Custom coaching rubrics per organization
-- Mobile application
-
----
-
-## Multi-Video Comparison Feature
-
-The comparison feature enables cross-session analysis by selecting 2-10 completed evaluations and running a specialized Claude analysis that identifies patterns, trends, and recommendations across sessions.
-
-### Comparison Types
-
-| Type | Use Case | Audience | What It Analyzes |
-|------|----------|----------|------------------|
-| **Personal Performance** | Same instructor, multiple sessions | Instructor + coach | Temporal improvement tracking, skill progression, habit patterns |
-| **Class Delivery** | Same class, different instructors | Coaching team lead | Delivery variation, best practices extraction, consistency gaps |
-| **Program Evaluation** | Sample from a program | Program director | Programmatic consistency, curriculum alignment, quality distribution |
-
-### How It Works
-
-1. **Select evaluations** — Choose 2-10 completed evaluations from the dashboard
-2. **Choose comparison type** — Each type uses a different analytical lens and prompt variant
-3. **Analysis runs** — Claude receives the evaluation *reports* (not raw transcripts) to stay within token budget (~8K tokens for 3 reports vs ~500K for raw transcripts)
-4. **Results** — Cross-session report with aggregated metrics, trend detection, shared strengths, and growth opportunities
-5. **Download** — View in-app or download as a branded PDF
-
-### Comparison Metrics
-
-The pipeline automatically computes aggregated metrics from individual evaluations:
-
-- **Averages** — Mean speaking pace, filler frequency, question rate, tangent percentage across all sessions
-- **Ranges** — Min/max values to show variance
-- **Trends** — Directional detection (increasing/decreasing/stable) using a 5% threshold comparing first and last sessions
-
-### Architecture
-
-```
-POST /comparisons (start_immediately=true)
-  │
-  ├── Validate all evaluation IDs exist and are completed
-  ├── Create Comparison + ComparisonEvaluation join table entries
-  └── Launch background pipeline
-        │
-        ├── Load linked evaluations (reports + metrics)
-        ├── Select prompt variant by comparison_type
-        ├── Call Claude (claude-sonnet-4-20250514, max_tokens=12000)
-        ├── Extract strengths, growth areas, and aggregate metrics
-        └── Update comparison status → completed
-```
-
-The comparison is an **aggregation layer** — it references evaluations but never modifies them. Individual evaluation data remains atomic and unchanged.
-
-### API Usage Example
+The app opens at **http://localhost:3000**; the API and interactive Swagger docs are at **http://localhost:8000** and **http://localhost:8000/docs**.
 
 ```bash
-# Create and start a comparison
+# Run the backend test suite
+cd backend && python -m pytest
+```
+
+---
+
+## Demo Scenarios
+
+**Scenario 1 — Single-session coaching report.**
+Input: a 45-minute recorded training session (MP4). Expected: ALCA transcribes it, scores all four dimensions, and renders a 12–20-page PDF. Outcome: the instructor sees, e.g., "speaking pace 178 WPM — above the 120–160 target; three runs exceed 200 WPM at [12:04], [27:31], [38:50]," each linked to the transcript moment.
+
+**Scenario 2 — Personal performance trend.**
+Input: 5 completed evaluations for the same instructor across a quarter, compared as `personal_performance`. Expected: Claude analyzes the five *reports* (not raw transcripts) and reports directional trends with a 5% threshold. Outcome: "filler-word rate trending down (−18% first-to-last); question frequency stable" — a longitudinal view no single report can give.
+
+**Scenario 3 — Program evaluation.**
+Input: a 10-session sample across a training program, compared as `program_evaluation`. Expected: aggregated averages, min/max ranges, and quality distribution across instructors. Outcome: a program director sees consistency gaps and shared strengths in one PDF — the cross-instructor view that justifies curriculum or coaching investment.
+
+---
+
+## API Documentation
+
+Twenty endpoints across videos, evaluations, instructor dashboards, and comparisons. The full set is auto-documented at `/docs`; the comparison flow is representative:
+
+```bash
+# Create and start a cross-session comparison
 curl -X POST http://localhost:8000/api/v1/comparisons \
   -H "Content-Type: application/json" \
   -d '{
@@ -285,42 +162,101 @@ curl -X POST http://localhost:8000/api/v1/comparisons \
     "start_immediately": true
   }'
 
-# Poll for completion
+# Poll for completion: status "queued" → "analyzing" → "completed"
 curl http://localhost:8000/api/v1/comparisons/{id}
-# → status: "queued" → "analyzing" → "completed"
 
-# Get the report
+# Fetch JSON report, then download the branded PDF
 curl http://localhost:8000/api/v1/comparisons/{id}/report
-
-# Download PDF
 curl -o comparison.pdf http://localhost:8000/api/v1/comparisons/{id}/report/pdf
+```
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/v1/videos/upload` | Upload a training video (MP4/MOV/WebM/AVI, ≤10 GB) |
+| `GET` · `DELETE` | `/api/v1/videos/{id}` | Get / delete a video |
+| `POST` | `/api/v1/evaluations` | Start a coaching evaluation (async) |
+| `GET` | `/api/v1/evaluations/{id}` | Status: `queued → transcribing → analyzing → completed` |
+| `GET` | `/api/v1/evaluations/{id}/report` · `/report/pdf` | Coaching report as JSON or PDF |
+| `GET` | `/api/v1/instructors/{id}/dashboard` | Performance dashboard + metric trends |
+| `POST` · `GET` | `/api/v1/comparisons` | Create / list cross-session comparisons |
+| `GET` | `/api/v1/comparisons/{id}/report/pdf` | Comparison PDF |
+| `GET` | `/health` | Health check with database status |
+
+---
+
+## Project Structure
+
+```
+alca-showcase/
+├── backend/
+│   ├── app/
+│   │   ├── main.py            # FastAPI entry point
+│   │   ├── config.py          # Pydantic settings from .env
+│   │   ├── database.py        # async SQLAlchemy engine/session
+│   │   ├── models/            # 7 models: User, Video, Transcript, Evaluation,
+│   │   │                      #   Comparison, ComparisonEvaluation, Organization
+│   │   ├── routers/           # videos · evaluations · instructors · comparisons
+│   │   ├── schemas/           # Pydantic request/response (2–10 comparison validator)
+│   │   └── services/          # transcription · analysis · comparison_analysis ·
+│   │       │                  #   pdf_report · comparison_pdf · prompts · storage
+│   │       └── ...            #   evaluation + comparison pipeline orchestrators
+│   └── tests/                 # 61 async integration tests (real PostgreSQL)
+├── frontend/
+│   └── src/
+│       ├── api/client.ts      # Axios wrapper for all endpoints
+│       ├── pages/             # Dashboard · Upload · EvaluationDetail ·
+│       │                      #   ComparisonCreate · ComparisonDetail
+│       ├── components/        # Layout, navigation
+│       └── theme/             # MUI theme
+└── docs/assets/architecture.svg
 ```
 
 ---
 
-## Cost Estimates
+## Roadmap & Limitations
 
-### Per Evaluation
+Honest status — this is an MVP (Phase 1) of the core pipeline plus cross-session comparison.
 
-| Component | 1-hour video | 6-hour video |
-|-----------|-------------|-------------|
-| AssemblyAI transcription | $0.90 | $5.40 |
-| Claude analysis | ~$0.38 | ~$0.38 |
-| PDF generation | <$0.01 | <$0.01 |
-| **Total** | **~$1.30** | **~$5.85** |
+**Built and working**
+- Video upload with format/size validation, AssemblyAI transcription, four-dimension Claude analysis, ReportLab PDF, historical trend tracking, the React dashboard, and 2–10-session comparisons.
+- 61 backend integration tests against a real PostgreSQL instance.
 
-### Per Comparison
+**Known limitations (by design, for an MVP)**
+- **No live hosted demo yet** — the Quick Start runs it locally. A hosted demo is the top roadmap item (see below).
+- **Background work uses FastAPI `BackgroundTasks`**, not a Celery/Redis queue; fine for demo scale, not yet for production throughput.
+- **No LLM evaluation harness yet** (DeepEval/Promptfoo/Ragas) — analysis quality is currently asserted by integration tests, not a judge suite. Adding one is on the roadmap.
+- **Auth is scaffolded, not enforced** — role-based access control is Phase 2. Do not deploy publicly as-is.
+- The standalone "reflection worksheet" PDF was **merged into the main report** in the v2 prompt refresh; there is no separate worksheet endpoint.
 
-| Component | 3 evaluations | 10 evaluations |
-|-----------|--------------|----------------|
-| Claude cross-session analysis | ~$0.15 | ~$0.40 |
-| PDF generation | <$0.01 | <$0.01 |
-| **Total** | **~$0.15** | **~$0.40** |
-
-Comparisons are inexpensive because they analyze evaluation *reports* (~8K tokens for 3 sessions), not raw transcripts.
+**Roadmap (Phase 2):** hosted demo (Railway backend + Vercel frontend) · auth + RBAC · S3 storage · Celery/Redis queue · LLM eval suite · coach/admin views · per-org custom rubrics.
 
 ---
 
+## About the Author
+
+**David Reed, Ph.D.** — Head of AI/ML & Agentic Delivery at Interview Kickstart. PhD in Computer Science, MBA, PMP, Wharton AI Fellow. Sole inventor of [US Patent 6,850,988](https://patents.google.com/patent/US6850988) — the foundational recommendation-engine architecture later widely deployed in commerce. Formerly Master Technologist at Hewlett-Packard (Distinguished/Principal-IC track) and Principal TPM-AI at Microsoft. 35+ years across data warehousing, enterprise AI/ML, and edtech, including leading a $70M data-science curriculum portfolio across R1 universities.
+
+I built ALCA to demonstrate end-to-end agentic AI engineering on a problem I know firsthand from running instruction at scale: **evaluating teaching quality is expensive, subjective, and slow.** The interesting engineering is in making LLM judgment *auditable* — every score traces to a timestamped transcript citation and a shown calculation, so a coach can trust, contest, or override it. The same data model that produces one report produces longitudinal trends and cross-session comparisons, which is where the real coaching value compounds.
+
+[Portfolio](https://drdavidreed.com) · [LinkedIn](https://linkedin.com/in/drdgreed) · drdgreed@gmail.com
+
+---
+
+## Contributing
+
+Setup, branching, and the PR workflow are in [CONTRIBUTING.md](CONTRIBUTING.md). Issues use the templates under [`.github/ISSUE_TEMPLATE/`](.github/ISSUE_TEMPLATE/); for security reports follow [SECURITY.md](SECURITY.md) rather than opening a public issue. By contributing you agree to the [Code of Conduct](CODE_OF_CONDUCT.md).
+
 ## License
 
-Private repository. All rights reserved.
+[MIT](LICENSE).
+
+## Acknowledgments
+
+- **Claude** (Anthropic) for the analysis layer and **AssemblyAI** for transcription.
+- The instructional-coaching research on clarity, engagement, explanation, and time management that grounds the four-dimension rubric.
+- Built as part of an AI/ML engineering portfolio. Synthetic data only — see the [Portfolio disclaimer](#portfolio-disclaimer).
+
+---
+
+**ALCA** — Instructor Coaching, Evidence-Cited and Repeatable
+*github.com/drdgreed/adult-learning-coach-showcase · David Reed, PhD · 2026*
