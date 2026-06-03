@@ -14,6 +14,12 @@
 [![Synthetic data](https://img.shields.io/badge/data-synthetic%20only-orange.svg)](#portfolio-disclaimer)
 [![MIT License](https://img.shields.io/badge/license-MIT-lightgrey.svg)](LICENSE)
 
+<p align="center">
+  <img src="docs/images/hero.png" alt="ALCA instructor dashboard — Jordan Rivera, 6 sessions analyzed: metric trend cards (speaking pace 149 WPM within the 120–160 target, strategic pauses, filler words, questions asked, and tangent time, four of them improving), recurring top strengths with session counts, and growth areas" width="900">
+</p>
+
+<p align="center"><sub><em>The instructor dashboard — six analyzed sessions with metric trends, recurring strengths, and growth areas. Synthetic demo data.</em></sub></p>
+
 ---
 
 ## Portfolio disclaimer
