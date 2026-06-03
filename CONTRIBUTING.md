@@ -14,10 +14,13 @@ python -m venv venv
 source venv/bin/activate                   # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 cp .env.example .env                        # add DATABASE_URL, API keys, SECRET_KEY
+cp app/services/prompts_content.example.py app/services/prompts_content.py   # runnable example prompts
 
 # Frontend
 cd ../frontend && npm install && cd ..
 ```
+
+> The production coaching prompts are proprietary and excluded from this repository. `prompts_content.example.py` is a runnable, sanitized stand-in — copy it to `prompts_content.py` as shown so the app imports and runs.
 
 You need a local PostgreSQL 15+, an [AssemblyAI](https://www.assemblyai.com/) key, and an [Anthropic](https://console.anthropic.com/) key. Never commit `.env` or any real key — see [SECURITY.md](SECURITY.md).
 

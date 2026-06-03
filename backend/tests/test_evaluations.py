@@ -135,13 +135,6 @@ async def test_download_report_pdf(client: AsyncClient, test_evaluation):
     assert response.content[:5] == b"%PDF-"
 
 
-@pytest.mark.asyncio
-async def test_download_worksheet_pdf(client: AsyncClient, test_evaluation):
-    """GET /api/v1/evaluations/{id}/worksheet/pdf returns a PDF file."""
-    response = await client.get(
-        f"/api/v1/evaluations/{test_evaluation.id}/worksheet/pdf"
-    )
-
-    assert response.status_code == 200
-    assert response.headers["content-type"] == "application/pdf"
-    assert response.content[:5] == b"%PDF-"
+# Note: the standalone reflection-worksheet PDF endpoint was removed in the v2
+# prompt refresh (its content merged into the main coaching report), so the
+# former test_download_worksheet_pdf was deleted along with the feature.

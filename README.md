@@ -124,6 +124,7 @@ cd backend
 python -m venv venv && source venv/bin/activate     # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 cp .env.example .env                                 # add DB URL, API keys, SECRET_KEY
+cp app/services/prompts_content.example.py app/services/prompts_content.py   # runnable example prompts
 uvicorn app.main:app --reload --port 8000
 
 # Frontend (separate terminal)
