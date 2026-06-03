@@ -152,6 +152,20 @@ Input: a 10-session sample across a training program, compared as `program_evalu
 
 ---
 
+## Screenshots
+
+<p align="center">
+  <img src="docs/images/dashboard-history.png" alt="ALCA dashboard, continued: recurring top strengths and growth areas with session counts, the full evaluation history table (six completed sessions with dates, status, strength/growth counts, and per-session WPM), and a recent cross-session comparison" width="900">
+</p>
+<p align="center"><sub><em>Dashboard, continued — recurring strengths and growth areas, the full evaluation history (six completed sessions with per-session metrics), and recent cross-session comparisons.</em></sub></p>
+
+<p align="center">
+  <img src="docs/images/comparison.png" alt="ALCA comparison builder: a three-step wizard (Choose Type, Select Evaluations, Review and Start) offering Personal Performance, Class Delivery, and Program Evaluation lenses, each with a description and a best-for audience" width="900">
+</p>
+<p align="center"><sub><em>The comparison builder — pick one of three analytical lenses, select 2–10 sessions, and run a cross-session analysis. Synthetic demo data throughout.</em></sub></p>
+
+---
+
 ## API Documentation
 
 Twenty endpoints across videos, evaluations, instructor dashboards, and comparisons. The full set is auto-documented at `/docs`; the comparison flow is representative:
